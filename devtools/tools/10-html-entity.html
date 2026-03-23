@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML 实体编码 — DevKit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/shared.css">
+<style>
+.entity-table { width:100%;border-collapse:collapse; }
+.entity-table th { padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);text-align:left;border-bottom:1px solid var(--border); }
+.entity-table td { padding:8px 12px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle; }
+.entity-table tr:last-child td { border-bottom:none; }
+.entity-table tr:hover td { background:rgba(124,106,255,0.03); }
+.ent-char { font-size:18px;color:var(--text); }
+.ent-html { color:var(--orange); }
+.ent-num { color:var(--cyan); }
+.ent-hex { color:var(--pink); }
+.ent-desc { color:var(--text3);font-size:11px; }
+.mode-tabs { display:flex;gap:8px;margin-bottom:20px; }
+.mode-tab { padding:8px 20px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text3);transition:all 0.15s; }
+.mode-tab.active { background:var(--accent);color:white;border-color:var(--accent); }
+.option-check { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="toast">✓ 已复制</div>
+<div class="page-wrap">
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← 返回首页</a>
+    <div class="nav-title">&lt;/&gt; HTML 实体</div>
+    <div class="nav-badge">#10</div>
+  </nav>
+
+  <div class="tool-header">
+    <h1>HTML 实体编码 / 解码</h1>
+    <p>HTML标签转实体编码，实体还原HTML，支持多种编码模式，内置常用实体参考表。</p>
+  </div>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="switchMode('convert',this)">转换工具</button>
+    <button class="mode-tab" onclick="switchMode('reference',this)">实体参考表</button>
+  </div>
+
+  <!-- Convert mode -->
+  <div id="convertMode">
+    <div class="toolbar" style="margin-bottom:16px">
+      <button class="btn btn-primary" onclick="doEncode()">HTML → 实体</button>
+      <button class="btn btn-secondary" onclick="doDecode()">实体 → HTML</button>
+      <button class="btn btn-secondary" onclick="swapPanes()">⇄ 交换</button>
+      <button class="btn btn-secondary" onclick="copyOutput()">复制结果</button>
+      <button class="btn btn-danger" onclick="clearAll()">清空</button>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <label class="option-check">
+        <input type="checkbox" id="encodeAll" style="accent-color:var(--accent)"> 编码所有特殊字符
+      </label>
+      <label class="option-check">
+        <input type="checkbox" id="useNumeric" style="accent-color:var(--accent)"> 使用数字实体 (&amp;#xxx;)
+      </label>
+      <label class="option-check">
+        <input type="checkbox" id="useHex" style="accent-color:var(--accent)"> 使用十六进制 (&amp;#xXX;)
+      </label>
+    </div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-header"><span>// 输入</span></div>
+        <textarea class="code-area" id="inputHtml" placeholder='<div class="hello">你好 & 世界 © 2024</div>' oninput="autoConvert()"></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span>// 输出</span>
+          <div id="convertStatus"></div>
+        </div>
+        <textarea class="code-area" id="outputHtml" style="color:var(--orange)" readonly></textarea>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-header"><span>// 预览</span></div>
+      <div id="preview" style="padding:16px;min-height:60px;font-size:14px;line-height:1.7;color:var(--text)"></div>
+    </div>
+  </div>
+
+  <!-- Reference mode -->
+  <div id="referenceMode" style="display:none">
+    <div class="toolbar" style="margin-bottom:12px">
+      <input type="text" id="entitySearch" placeholder="搜索实体..." style="background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;width:200px" oninput="filterEntities()">
+    </div>
+    <div class="panel">
+      <table class="entity-table" id="entityTable">
+        <thead><tr><th>字符</th><th>HTML 实体</th><th>数字实体</th><th>十六进制</th><th>描述</th><th></th></tr></thead>
+        <tbody id="entityTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="ad-footer">
+    <div><strong>🚀 Pro 功能</strong> — 批量文件编码、XML实体转换、Markdown转义</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+</div>
+
+<script>
+const ENTITIES = [
+  ['&','&amp;','&#38;','&#x26;','and 符号'],
+  ['<','&lt;','&#60;','&#x3C;','小于号'],
+  ['>','&gt;','&#62;','&#x3E;','大于号'],
+  ['"','&quot;','&#34;','&#x22;','双引号'],
+  ["'",'&apos;','&#39;','&#x27;','单引号'],
+  ['©','&copy;','&#169;','&#xA9;','版权符号'],
+  ['®','&reg;','&#174;','&#xAE;','注册商标'],
+  ['™','&trade;','&#8482;','&#x2122;','商标符号'],
+  ['€','&euro;','&#8364;','&#x20AC;','欧元'],
+  ['£','&pound;','&#163;','&#xA3;','英镑'],
+  ['¥','&yen;','&#165;','&#xA5;','日元/人民币'],
+  ['°','&deg;','&#176;','&#xB0;','度数符号'],
+  ['±','&plusmn;','&#177;','&#xB1;','正负号'],
+  ['×','&times;','&#215;','&#xD7;','乘号'],
+  ['÷','&divide;','&#247;','&#xF7;','除号'],
+  ['½','&frac12;','&#189;','&#xBD;','二分之一'],
+  ['¼','&frac14;','&#188;','&#xBC;','四分之一'],
+  ['¾','&frac34;','&#190;','&#xBE;','四分之三'],
+  ['←','&larr;','&#8592;','&#x2190;','左箭头'],
+  ['→','&rarr;','&#8594;','&#x2192;','右箭头'],
+  ['↑','&uarr;','&#8593;','&#x2191;','上箭头'],
+  ['↓','&darr;','&#8595;','&#x2193;','下箭头'],
+  ['♠','&spades;','&#9824;','&#x2660;','黑桃'],
+  ['♣','&clubs;','&#9827;','&#x2663;','梅花'],
+  ['♥','&hearts;','&#9829;','&#x2665;','红心'],
+  ['♦','&diams;','&#9830;','&#x2666;','方块'],
+  [' ','&nbsp;','&#160;','&#xA0;','不换行空格'],
+  ['…','&hellip;','&#8230;','&#x2026;','省略号'],
+  ['—','&mdash;','&#8212;','&#x2014;','破折号'],
+  ['–','&ndash;','&#8211;','&#x2013;','连接号'],
+];
+
+function switchMode(mode, el) {
+  document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('convertMode').style.display = mode==='convert'?'block':'none';
+  document.getElementById('referenceMode').style.display = mode==='reference'?'block':'none';
+  if (mode==='reference') renderEntities(ENTITIES);
+}
+
+function renderEntities(data) {
+  document.getElementById('entityTbody').innerHTML = data.map(([char,html,num,hex,desc]) =>
+    `<tr><td class="ent-char">${char==' '?'&nbsp;(space)':char}</td><td class="ent-html">${escHtml(html)}</td><td class="ent-num">${num}</td><td class="ent-hex">${hex}</td><td class="ent-desc">${desc}</td><td><button class="btn btn-secondary" style="padding:2px 8px;font-size:10px" data-ent="${html.replace(/"/g,'&quot;')}" onclick="navigator.clipboard.writeText(this.dataset.ent).then(showToast)">复制</button></td></tr>`
+  ).join('');
+}
+
+function filterEntities() {
+  const q = document.getElementById('entitySearch').value.toLowerCase();
+  const filtered = ENTITIES.filter(([char,html,num,hex,desc]) =>
+    char.includes(q)||html.toLowerCase().includes(q)||desc.includes(q)
+  );
+  renderEntities(filtered);
+}
+
+function doEncode() {
+  const v = document.getElementById('inputHtml').value;
+  const useNum = document.getElementById('useNumeric').checked;
+  const useHex = document.getElementById('useHex').checked;
+  const all = document.getElementById('encodeAll').checked;
+  let result;
+  if (useHex) result = v.split('').map(c => '&#x'+c.charCodeAt(0).toString(16)+';').join('');
+  else if (useNum) result = v.split('').map(c => '&#'+c.charCodeAt(0)+';').join('');
+  else result = v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  document.getElementById('outputHtml').value = result;
+  setStatus('ok','✓ 编码完成');
+  updatePreview(result);
+}
+
+function doDecode() {
+  const v = document.getElementById('inputHtml').value;
+  const div = document.createElement('div');
+  div.innerHTML = v;
+  const result = div.textContent;
+  document.getElementById('outputHtml').value = result;
+  setStatus('ok','✓ 解码完成');
+  updatePreview(v);
+}
+
+function updatePreview(html) {
+  document.getElementById('preview').innerHTML = html;
+}
+
+function autoConvert() {
+  // just clear output on input change
+  document.getElementById('outputHtml').value = '';
+  document.getElementById('convertStatus').innerHTML = '';
+}
+
+function swapPanes() {
+  const i = document.getElementById('inputHtml');
+  const o = document.getElementById('outputHtml');
+  i.value = o.value;
+  o.value = '';
+}
+
+function copyOutput() {
+  const v = document.getElementById('outputHtml').value;
+  if (v) navigator.clipboard.writeText(v).then(showToast);
+}
+
+function clearAll() {
+  document.getElementById('inputHtml').value='';
+  document.getElementById('outputHtml').value='';
+  document.getElementById('preview').innerHTML='';
+  document.getElementById('convertStatus').innerHTML='';
+}
+
+function setStatus(t,m) {
+  document.getElementById('convertStatus').innerHTML=`<span class="status ${t}">${m}</span>`;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+</script>
+</body>
+</html>

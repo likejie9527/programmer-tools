@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON 格式化 & 校验 — DevKit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/shared.css">
+<style>
+.json-output {
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 260px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  max-height: 500px;
+}
+.j-key { color: #1d4ed8; }
+.j-str { color: #15803d; }
+.j-num { color: #92400e; }
+.j-bool { color: #c2410c; }
+.j-null { color: #dc2626; }
+.error-msg {
+  color: var(--red);
+  font-size: 12px;
+  padding: 12px 16px;
+  background: #fff1f2;
+  border-top: 1px solid #fee2e2;
+}
+.stats-bar {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text3);
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text3);
+  transition: all 0.15s;
+  letter-spacing: 0.5px;
+}
+.tab-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+</style>
+</head>
+<body>
+<div id="toast">✓ 已复制</div>
+<div class="page-wrap">
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← 返回首页</a>
+    <div class="nav-title">{ } JSON 格式化</div>
+    <div class="nav-badge">#01</div>
+  </nav>
+
+  <div class="tool-header">
+    <h1>JSON 格式化 & 校验</h1>
+    <p>粘贴JSON，自动格式化、语法高亮、错误定位。支持压缩、展开、一键复制。<span style="color:var(--text3);margin-left:8px">Ctrl+Enter 格式化</span></p>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="formatJSON()">⚡ 格式化</button>
+    <button class="btn btn-secondary" onclick="minifyJSON()">压缩</button>
+    <button class="btn btn-secondary" onclick="copyResult()">复制结果</button>
+    <button class="btn btn-danger" onclick="clearAll()">清空</button>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <span style="font-size:11px;color:var(--text3)">缩进:</span>
+      <button class="tab-btn active" id="indent2" onclick="setIndent(2,this)">2</button>
+      <button class="tab-btn" id="indent4" onclick="setIndent(4,this)">4</button>
+      <button class="tab-btn" id="indentTab" onclick="setIndent('\t',this)">tab</button>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <span>// 输入 JSON</span>
+        <div class="actions">
+          <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="loadSample()">示例</button>
+        </div>
+      </div>
+      <textarea class="code-area" id="input" placeholder='{"name":"DevKit","version":1,"tools":["JSON","URL","Base64"]}' oninput="onInput()"></textarea>
+      <div id="inputStatus"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>// 输出结果</span>
+        <div id="outputStatus"></div>
+      </div>
+      <div class="json-output" id="output">// 结果将显示在这里</div>
+      <div class="stats-bar" id="statsBar" style="display:none"></div>
+      <div class="error-msg" id="errorMsg" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="ad-footer">
+    <div><strong>🚀 Pro 功能</strong> — JSON ↔ YAML / CSV / XML 转换、批量处理文件</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+</div>
+
+<script>
+let currentIndent = 2;
+let currentJson = null;
+
+function setIndent(v, el) {
+  currentIndent = v;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (currentJson) renderFormatted(currentJson);
+}
+
+function onInput() {
+  const v = document.getElementById('input').value.trim();
+  if (!v) { resetOutput(); return; }
+  try {
+    currentJson = JSON.parse(v);
+    renderFormatted(currentJson);
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function formatJSON() {
+  const v = document.getElementById('input').value.trim();
+  if (!v) return;
+  try {
+    currentJson = JSON.parse(v);
+    renderFormatted(currentJson);
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function minifyJSON() {
+  const v = document.getElementById('input').value.trim();
+  if (!v) return;
+  try {
+    const parsed = JSON.parse(v);
+    const minified = JSON.stringify(parsed);
+    document.getElementById('output').textContent = minified;
+    document.getElementById('errorMsg').style.display = 'none';
+    showStats(minified);
+    setOutputStatus('ok', '✓ 压缩完成');
+  } catch(e) { showError(e.message); }
+}
+
+function renderFormatted(obj) {
+  const str = JSON.stringify(obj, null, currentIndent);
+  document.getElementById('output').innerHTML = syntaxHighlight(str);
+  document.getElementById('errorMsg').style.display = 'none';
+  showStats(str);
+  setOutputStatus('ok', '✓ 格式化完成');
+  document.getElementById('inputStatus').innerHTML = '<span class="status ok">✓ 有效 JSON</span>';
+}
+
+function showError(msg) {
+  document.getElementById('output').innerHTML = '<span style="color:var(--text3)">// 解析失败</span>';
+  document.getElementById('errorMsg').textContent = '✗ 错误: ' + msg;
+  document.getElementById('errorMsg').style.display = 'block';
+  document.getElementById('statsBar').style.display = 'none';
+  setOutputStatus('err', '✗ 解析错误');
+  document.getElementById('inputStatus').innerHTML = '<span class="status err">✗ JSON 无效</span>';
+  currentJson = null;
+}
+
+function syntaxHighlight(str) {
+  return str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+    let cls = 'j-num';
+    if (/^"/.test(match)) {
+      cls = /:$/.test(match) ? 'j-key' : 'j-str';
+    } else if (/true|false/.test(match)) {
+      cls = 'j-bool';
+    } else if (/null/.test(match)) {
+      cls = 'j-null';
+    }
+    return `<span class="${cls}">${escapeHtml(match)}</span>`;
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showStats(str) {
+  const bar = document.getElementById('statsBar');
+  const bytes = new Blob([str]).size;
+  bar.style.display = 'flex';
+  bar.innerHTML = `<span>字符数: ${str.length}</span><span>大小: ${bytes < 1024 ? bytes+'B' : (bytes/1024).toFixed(1)+'KB'}</span>`;
+}
+
+function setOutputStatus(type, msg) {
+  document.getElementById('outputStatus').innerHTML = `<span class="status ${type}">${msg}</span>`;
+}
+
+function copyResult() {
+  const out = document.getElementById('output').innerText;
+  if (!out || out.startsWith('//')) return;
+  navigator.clipboard.writeText(out).then(showToast);
+}
+
+function clearAll() {
+  document.getElementById('input').value = '';
+  resetOutput();
+}
+
+function resetOutput() {
+  document.getElementById('output').innerHTML = '// 结果将显示在这里';
+  document.getElementById('outputStatus').innerHTML = '';
+  document.getElementById('inputStatus').innerHTML = '';
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  currentJson = null;
+}
+
+function loadSample() {
+  document.getElementById('input').value = JSON.stringify({
+    name:"DevKit",version:"1.0.0",author:{name:"Dev",email:"dev@example.com"},
+    tools:["JSON","URL","Base64","UUID","Regex"],
+    config:{theme:"dark",indent:2,autoFormat:true},
+    meta:{created:1700000000,active:true,data:null}
+  });
+  formatJSON();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (msg) t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => { t.classList.remove('show'); if(msg) setTimeout(()=>t.textContent='✓ 已复制',300); }, 2000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); formatJSON(); }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') { e.preventDefault(); copyResult(); }
+});
+</script>
+</body>
+</html>

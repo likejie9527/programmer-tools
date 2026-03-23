@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevKit — 程序员工具箱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f8fa;
+    --surface2: #18181f;
+    --border: #22222e;
+    --border2: #2e2e3e;
+    --text: #e8e8f0;
+    --text2: #8888a0;
+    --text3: #55556a;
+    --accent: #2563eb;
+    --accent2: #1d4ed8;
+    --green: #15803d;
+    --orange: #c2410c;
+    --red: #dc2626;
+    --yellow: #92400e;
+    --cyan: #0e7490;
+    --pink: #9d174d;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  body::after {
+    content: '';
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #dbeafe 0%, transparent 65%);
+    top: -200px;
+    right: -200px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 32px 0 0;
+    position: relative;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 0 20px #93c5fd;
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent2); }
+
+  .nav-badge {
+    font-size: 11px;
+    color: var(--text3);
+    border: 1px solid var(--border2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 80px 0 60px;
+    text-align: center;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--accent2);
+    text-transform: uppercase;
+    border: 1px solid #bfdbfe;
+    padding: 6px 14px;
+    border-radius: 4px;
+    margin-bottom: 28px;
+    background: #f0f9ff;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #111318 0%, #3d4452 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero h1 .accent {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-desc {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.8;
+    max-width: 480px;
+    margin: 0 auto 40px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent2);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* Search */
+  .search-wrap {
+    max-width: 480px;
+    margin: 0 auto 60px;
+    position: relative;
+  }
+
+  .search-wrap::before {
+    content: '⌕';
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  #search {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 14px 16px 14px 44px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px #eff6ff;
+  }
+
+  #search::placeholder { color: var(--text3); }
+
+  /* Tools grid */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 80px;
+  }
+
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-decoration: none;
+    display: block;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 12px;
+  }
+
+  .tool-card:hover {
+    border-color: var(--card-color, var(--accent));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .tool-card:hover::before {
+    opacity: 1;
+    background: radial-gradient(ellipse at top left, rgba(var(--card-rgb, 37,99,235), 0.07) 0%, transparent 60%);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .card-num {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 400;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text3);
+  }
+
+  .card-arrow {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .tool-card:hover .card-arrow {
+    border-color: var(--card-color, var(--accent));
+    color: var(--card-color, var(--accent));
+    background: #eff6ff;
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+    gap: 16px;
+  }
+
+  footer .left {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  footer .right {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* Ad banner */
+  .ad-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .ad-text {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .ad-text strong { color: var(--accent2); }
+
+  .ad-btn {
+    font-size: 11px;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+
+  .ad-btn:hover { background: var(--accent2); }
+
+  /* Animations */
+  .tool-card {
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tool-card:nth-child(1) { animation-delay: 0.05s; }
+  .tool-card:nth-child(2) { animation-delay: 0.1s; }
+  .tool-card:nth-child(3) { animation-delay: 0.15s; }
+  .tool-card:nth-child(4) { animation-delay: 0.2s; }
+  .tool-card:nth-child(5) { animation-delay: 0.25s; }
+  .tool-card:nth-child(6) { animation-delay: 0.3s; }
+  .tool-card:nth-child(7) { animation-delay: 0.35s; }
+  .tool-card:nth-child(8) { animation-delay: 0.4s; }
+  .tool-card:nth-child(9) { animation-delay: 0.45s; }
+  .tool-card:nth-child(10) { animation-delay: 0.5s; }
+  .tool-card:nth-child(11) { animation-delay: 0.55s; }
+  .tool-card:nth-child(12) { animation-delay: 0.6s; }
+  .tool-card:nth-child(13) { animation-delay: 0.65s; }
+  .tool-card:nth-child(14) { animation-delay: 0.7s; }
+  .tool-card:nth-child(15) { animation-delay: 0.75s; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 600px) {
+    .hero { padding: 48px 0 40px; }
+    .hero-stats { gap: 20px; }
+    .tools-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <nav class="nav">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-text">Dev<span>Kit</span></div>
+      </a>
+      <div class="nav-badge">v1.0 · 15 TOOLS</div>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">纯前端 · 无需后端 · 隐私安全</div>
+    <h1>程序员的<br><span class="accent">效率工具箱</span></h1>
+    <p class="hero-desc">15个高频开发工具，全部在浏览器本地运行，不上传任何数据，随用随走。</p>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">15</div>
+        <div class="stat-label">TOOLS</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">0</div>
+        <div class="stat-label">BACKEND</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">FREE</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="search-wrap">
+    <input id="search" type="text" placeholder="搜索工具... 按 / 聚焦，Esc 清空" autocomplete="off">
+  </div>
+
+  <div class="ad-banner">
+    <div class="ad-text"><strong>🚀 Pro 版本</strong> — 解锁批量处理、无广告体验、优先更新，支持独立开发者</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+
+  <div class="section-label">// 全部工具</div>
+
+  <div class="tools-grid" id="toolsGrid">
+
+    <a href="tools/01-json.html" class="tool-card" style="--card-color:var(--green);--card-rgb:21,128,61" data-tags="json 格式化 校验 压缩">
+      <div class="card-top">
+        <div class="card-icon">{ }</div>
+        <div class="card-num">#01</div>
+      </div>
+      <div class="card-title">JSON 格式化 & 校验</div>
+      <div class="card-desc">自动格式化、语法高亮、错误定位、一键压缩展开</div>
+      <div class="card-tags">
+        <span class="tag">FORMAT</span>
+        <span class="tag">VALIDATE</span>
+        <span class="tag">MINIFY</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/02-url.html" class="tool-card" style="--card-color:var(--cyan);--card-rgb:14,116,144" data-tags="url 编码 解码 参数 querystring">
+      <div class="card-top">
+        <div class="card-icon">🔗</div>
+        <div class="card-num">#02</div>
+      </div>
+      <div class="card-title">URL 编码 / 解码</div>
+      <div class="card-desc">URL编码解码、自动解析QueryString参数列表</div>
+      <div class="card-tags">
+        <span class="tag">ENCODE</span>
+        <span class="tag">DECODE</span>
+        <span class="tag">PARAMS</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/03-base64.html" class="tool-card" style="--card-color:var(--orange);--card-rgb:194,65,12" data-tags="base64 编码 解码 图片 文本">
+      <div class="card-top">
+        <div class="card-icon">📦</div>
+        <div class="card-num">#03</div>
+      </div>
+      <div class="card-title">Base64 编码 / 解码</div>
+      <div class="card-desc">文本与Base64互转，本地图片转Base64，实时预览</div>
+      <div class="card-tags">
+        <span class="tag">TEXT</span>
+        <span class="tag">IMAGE</span>
+        <span class="tag">BASE64</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/04-uuid.html" class="tool-card" style="--card-color:var(--accent2);--card-rgb:37,99,235" data-tags="uuid guid 随机 生成">
+      <div class="card-top">
+        <div class="card-icon">🎲</div>
+        <div class="card-num">#04</div>
+      </div>
+      <div class="card-title">UUID / GUID 生成器</div>
+      <div class="card-desc">支持v1/v4，批量生成最多100个，一键复制去重</div>
+      <div class="card-tags">
+        <span class="tag">UUID v1</span>
+        <span class="tag">UUID v4</span>
+        <span class="tag">BATCH</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/05-regex.html" class="tool-card" style="--card-color:var(--pink);--card-rgb:157,23,77" data-tags="正则 regex 匹配 测试 高亮">
+      <div class="card-top">
+        <div class="card-icon">.*</div>
+        <div class="card-num">#05</div>
+      </div>
+      <div class="card-title">正则表达式测试</div>
+      <div class="card-desc">实时匹配高亮、分组显示、内置常用正则示例库</div>
+      <div class="card-tags">
+        <span class="tag">MATCH</span>
+        <span class="tag">HIGHLIGHT</span>
+        <span class="tag">GROUPS</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/06-timestamp.html" class="tool-card" style="--card-color:var(--yellow);--card-rgb:120,53,15" data-tags="时间戳 时间 日期 转换 unix">
+      <div class="card-top">
+        <div class="card-icon">⏱</div>
+        <div class="card-num">#06</div>
+      </div>
+      <div class="card-title">时间戳互转工具</div>
+      <div class="card-desc">10位/13位时间戳与日期互转，支持UTC/本地时间</div>
+      <div class="card-tags">
+        <span class="tag">UNIX</span>
+        <span class="tag">UTC</span>
+        <span class="tag">LOCAL</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/07-crypto.html" class="tool-card" style="--card-color:var(--red);--card-rgb:220,38,38" data-tags="加密 解密 md5 sha aes hash">
+      <div class="card-top">
+        <div class="card-icon">🔐</div>
+        <div class="card-num">#07</div>
+      </div>
+      <div class="card-title">文本加密 / 哈希</div>
+      <div class="card-desc">MD5、SHA1、SHA256哈希，AES加密解密，本地计算</div>
+      <div class="card-tags">
+        <span class="tag">MD5</span>
+        <span class="tag">SHA256</span>
+        <span class="tag">AES</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/08-diff.html" class="tool-card" style="--card-color:var(--green);--card-rgb:21,128,61" data-tags="diff 对比 差异 代码 文本">
+      <div class="card-top">
+        <div class="card-icon">⇄</div>
+        <div class="card-num">#08</div>
+      </div>
+      <div class="card-title">代码 Diff 对比</div>
+      <div class="card-desc">左右双栏对比，增删改高亮标注，实时检测差异</div>
+      <div class="card-tags">
+        <span class="tag">DIFF</span>
+        <span class="tag">COMPARE</span>
+        <span class="tag">LINES</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/09-radix.html" class="tool-card" style="--card-color:var(--cyan);--card-rgb:14,116,144" data-tags="进制 二进制 十六进制 转换 hex">
+      <div class="card-top">
+        <div class="card-icon">01</div>
+        <div class="card-num">#09</div>
+      </div>
+      <div class="card-title">进制转换工具</div>
+      <div class="card-desc">二/八/十/十六进制实时互转，支持字节位显示</div>
+      <div class="card-tags">
+        <span class="tag">BIN</span>
+        <span class="tag">HEX</span>
+        <span class="tag">OCT</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/10-html-entity.html" class="tool-card" style="--card-color:var(--orange);--card-rgb:194,65,12" data-tags="html 实体 编码 解码 转义">
+      <div class="card-top">
+        <div class="card-icon">&lt;/&gt;</div>
+        <div class="card-num">#10</div>
+      </div>
+      <div class="card-title">HTML 实体编码</div>
+      <div class="card-desc">HTML标签转实体编码，实体还原HTML，高亮展示</div>
+      <div class="card-tags">
+        <span class="tag">ESCAPE</span>
+        <span class="tag">UNESCAPE</span>
+        <span class="tag">HTML</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/11-password.html" class="tool-card" style="--card-color:var(--accent2);--card-rgb:37,99,235" data-tags="密码 随机 字符串 token api key">
+      <div class="card-top">
+        <div class="card-icon">🔑</div>
+        <div class="card-num">#11</div>
+      </div>
+      <div class="card-title">随机字符串生成器</div>
+      <div class="card-desc">自定义长度字符集，生成API Key、Token、加密盐</div>
+      <div class="card-tags">
+        <span class="tag">PASSWORD</span>
+        <span class="tag">TOKEN</span>
+        <span class="tag">API KEY</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/12-sql.html" class="tool-card" style="--card-color:var(--pink);--card-rgb:157,23,77" data-tags="sql 格式化 美化 压缩 数据库">
+      <div class="card-top">
+        <div class="card-icon">🗄</div>
+        <div class="card-num">#12</div>
+      </div>
+      <div class="card-title">SQL 格式化 & 美化</div>
+      <div class="card-desc">自动格式化SQL、关键字高亮、压缩成单行</div>
+      <div class="card-tags">
+        <span class="tag">FORMAT</span>
+        <span class="tag">HIGHLIGHT</span>
+        <span class="tag">MINIFY</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/13-markdown.html" class="tool-card" style="--card-color:var(--yellow);--card-rgb:120,53,15" data-tags="markdown md 预览 编辑 导出">
+      <div class="card-top">
+        <div class="card-icon">📝</div>
+        <div class="card-num">#13</div>
+      </div>
+      <div class="card-title">Markdown 实时预览</div>
+      <div class="card-desc">左编辑右预览，支持GFM语法，一键导出HTML</div>
+      <div class="card-tags">
+        <span class="tag">EDITOR</span>
+        <span class="tag">PREVIEW</span>
+        <span class="tag">EXPORT</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/14-cron.html" class="tool-card" style="--card-color:var(--green);--card-rgb:21,128,61" data-tags="cron 定时 任务 表达式 schedule">
+      <div class="card-top">
+        <div class="card-icon">⏰</div>
+        <div class="card-num">#14</div>
+      </div>
+      <div class="card-title">CRON 表达式工具</div>
+      <div class="card-desc">可视化生成CRON、解析下次执行时间、常用示例</div>
+      <div class="card-tags">
+        <span class="tag">GENERATE</span>
+        <span class="tag">PARSE</span>
+        <span class="tag">SCHEDULE</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a href="tools/15-qrcode.html" class="tool-card" style="--card-color:var(--red);--card-rgb:220,38,38" data-tags="二维码 qrcode 生成 解析 扫码">
+      <div class="card-top">
+        <div class="card-icon">▦</div>
+        <div class="card-num">#15</div>
+      </div>
+      <div class="card-title">二维码生成 & 解析</div>
+      <div class="card-desc">文本/链接生成二维码，本地解析图片，支持下载</div>
+      <div class="card-tags">
+        <span class="tag">GENERATE</span>
+        <span class="tag">DECODE</span>
+        <span class="tag">DOWNLOAD</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+  </div>
+
+  <footer>
+    <div class="left">© 2025 DevKit · 纯前端工具箱 · 本地运行 · 隐私安全</div>
+    <div class="right">Build with ❤️ for developers</div>
+  </footer>
+</div>
+
+<script>
+  const search = document.getElementById('search');
+  const cards = document.querySelectorAll('.tool-card');
+  const grid = document.querySelector('.tools-grid');
+
+  let noResultsEl = null;
+
+  search.addEventListener('input', () => {
+    const q = search.value.toLowerCase().trim();
+    let visible = 0;
+    cards.forEach(card => {
+      const title = card.querySelector('.card-title').textContent.toLowerCase();
+      const desc = card.querySelector('.card-desc').textContent.toLowerCase();
+      const tags = card.dataset.tags || '';
+      const match = !q || title.includes(q) || desc.includes(q) || tags.includes(q);
+      card.classList.toggle('hidden', !match);
+      if (match) visible++;
+    });
+    // No results state
+    if (noResultsEl) noResultsEl.remove();
+    if (visible === 0 && q) {
+      noResultsEl = document.createElement('div');
+      noResultsEl.style.cssText = 'grid-column:1/-1;text-align:center;padding:48px 0;color:#50506a;font-size:13px;';
+      noResultsEl.innerHTML = `没有找到与 "<span style="color:var(--accent2)">${q}</span>" 相关的工具`;
+      grid.appendChild(noResultsEl);
+    }
+  });
+
+  // Press "/" to focus search
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== search) {
+      e.preventDefault();
+      search.focus();
+      search.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === search) {
+      search.value = '';
+      search.dispatchEvent(new Event('input'));
+      search.blur();
+    }
+  });
+</script>
+</body>
+</html>

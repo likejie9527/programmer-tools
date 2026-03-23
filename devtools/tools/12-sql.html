@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL 格式化 — DevKit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/shared.css">
+<style>
+.sql-output { padding:16px;font-size:13px;line-height:1.8;min-height:260px;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:500px; }
+.kw { color:#c2410c;font-weight:600; }
+.fn { color:#0e7490; }
+.str { color:#15803d; }
+.num { color:#92400e; }
+.cmt { color:#6b7385;font-style:italic; }
+.op { color:#7c3aed; }
+.punc { color:#6b7385; }
+</style>
+</head>
+<body>
+<div id="toast">✓ 已复制</div>
+<div class="page-wrap">
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← 返回首页</a>
+    <div class="nav-title">🗄 SQL 格式化</div>
+    <div class="nav-badge">#12</div>
+  </nav>
+
+  <div class="tool-header">
+    <h1>SQL 格式化 & 美化</h1>
+    <p>自动格式化SQL、关键字高亮、智能缩进，支持压缩成单行。</p>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="formatSQL()">⚡ 格式化</button>
+    <button class="btn btn-secondary" onclick="minifySQL()">压缩</button>
+    <button class="btn btn-secondary" onclick="copyResult()">复制结果</button>
+    <button class="btn btn-danger" onclick="clearAll()">清空</button>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <select id="dialect" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none">
+        <option>MySQL</option>
+        <option>PostgreSQL</option>
+        <option>SQLite</option>
+        <option>SQL Server</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <span>// 输入 SQL</span>
+        <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="loadSample()">示例</button>
+      </div>
+      <textarea class="code-area" id="sqlInput" placeholder="SELECT * FROM users WHERE id = 1 AND status = 'active';" oninput="autoFormat()"></textarea>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span>// 格式化结果</span>
+        <div id="sqlStatus"></div>
+      </div>
+      <div class="sql-output" id="sqlOutput">// 结果将显示在这里</div>
+    </div>
+  </div>
+
+  <div class="ad-footer">
+    <div><strong>🚀 Pro 功能</strong> — SQL执行计划分析、查询优化建议、ORM代码生成</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+</div>
+
+<script>
+const KEYWORDS = ['SELECT','FROM','WHERE','AND','OR','NOT','IN','IS','NULL','LIKE','BETWEEN','EXISTS','JOIN','LEFT','RIGHT','INNER','OUTER','FULL','CROSS','ON','AS','GROUP','BY','ORDER','HAVING','LIMIT','OFFSET','UNION','ALL','DISTINCT','INSERT','INTO','VALUES','UPDATE','SET','DELETE','CREATE','TABLE','DROP','ALTER','ADD','COLUMN','INDEX','PRIMARY','KEY','FOREIGN','REFERENCES','CONSTRAINT','DEFAULT','UNIQUE','CHECK','IF','THEN','ELSE','CASE','WHEN','END','BEGIN','COMMIT','ROLLBACK','TRANSACTION','DATABASE','SCHEMA','VIEW','TRIGGER','PROCEDURE','FUNCTION','RETURNS','RETURN','DECLARE','WITH','CTE'];
+const FUNCTIONS = ['COUNT','SUM','AVG','MAX','MIN','COALESCE','ISNULL','NULLIF','CAST','CONVERT','DATE','NOW','GETDATE','CONCAT','SUBSTRING','LENGTH','TRIM','UPPER','LOWER','REPLACE','ROUND','FLOOR','CEIL','ABS','MOD','POWER','SQRT'];
+
+function highlightSQL(sql) {
+  return sql
+    .replace(/--.*$/gm, m => `<span class="cmt">${escHtml(m)}</span>`)
+    .replace(/\/\*[\s\S]*?\*\//g, m => `<span class="cmt">${escHtml(m)}</span>`)
+    .replace(/'[^']*'/g, m => `<span class="str">${escHtml(m)}</span>`)
+    .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>')
+    .replace(new RegExp(`\\b(${FUNCTIONS.join('|')})\\b`, 'gi'), m => `<span class="fn">${m.toUpperCase()}</span>`)
+    .replace(new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi'), m => `<span class="kw">${m.toUpperCase()}</span>`)
+    .replace(/[=<>!]+/g, m => `<span class="op">${escHtml(m)}</span>`)
+    .replace(/[(),;]/g, m => `<span class="punc">${m}</span>`);
+}
+
+function formatSQL() {
+  const sql = document.getElementById('sqlInput').value.trim();
+  if (!sql) return;
+  const formatted = prettySQL(sql);
+  document.getElementById('sqlOutput').innerHTML = highlightSQL(escHtml(formatted)).replace(/__HL_OPEN__/g,'').replace(/__HL_CLOSE__/g,'');
+  // Actually apply highlight to the formatted (unescaped) text
+  document.getElementById('sqlOutput').innerHTML = applyHighlight(formatted);
+  document.getElementById('sqlStatus').innerHTML = '<span class="status ok">✓ 格式化完成</span>';
+}
+
+function applyHighlight(sql) {
+  const escaped = escHtml(sql);
+  let result = escaped;
+  // Comments first (protect them)
+  const comments = [];
+  result = result.replace(/--[^\n]*/g, m => { comments.push(m); return `__CMT${comments.length-1}__`; });
+  // Strings
+  const strings = [];
+  result = result.replace(/&#39;[^&#]*&#39;/g, m => { strings.push(m); return `__STR${strings.length-1}__`; });
+  result = result.replace(/'[^']*'/g, m => { strings.push(escHtml(m)); return `__STR${strings.length-1}__`; });
+  // Numbers
+  result = result.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
+  // Functions
+  result = result.replace(new RegExp(`\\b(${FUNCTIONS.join('|')})\\b`, 'gi'), m => `<span class="fn">${m.toUpperCase()}</span>`);
+  // Keywords
+  result = result.replace(new RegExp(`\\b(${KEYWORDS.join('|')})\\b`, 'gi'), m => `<span class="kw">${m.toUpperCase()}</span>`);
+  // Operators
+  result = result.replace(/[=&lt;&gt;!]+/g, m => `<span class="op">${m}</span>`);
+  // Punctuation
+  result = result.replace(/[(),;]/g, m => `<span class="punc">${m}</span>`);
+  // Restore
+  strings.forEach((s,i) => { result = result.replace(`__STR${i}__`, `<span class="str">${s}</span>`); });
+  comments.forEach((c,i) => { result = result.replace(`__CMT${i}__`, `<span class="cmt">${c}</span>`); });
+  return result;
+}
+
+function prettySQL(sql) {
+  // Normalize whitespace
+  let s = sql.replace(/\s+/g,' ').trim();
+  const majorKws = ['SELECT','FROM','WHERE','JOIN','LEFT JOIN','RIGHT JOIN','INNER JOIN','OUTER JOIN','CROSS JOIN','GROUP BY','ORDER BY','HAVING','LIMIT','OFFSET','UNION','INSERT INTO','UPDATE','SET','DELETE FROM','CREATE TABLE','ALTER TABLE'];
+  majorKws.forEach(kw => {
+    const re = new RegExp(`\\b${kw.replace(/ /g,'\\s+')}\\b`, 'gi');
+    s = s.replace(re, '\n' + kw);
+  });
+  s = s.replace(/\bAND\b/gi, '\n  AND').replace(/\bOR\b/gi, '\n  OR');
+  s = s.replace(/,(?!\s*\n)/g, ',\n  ');
+  return s.split('\n').map(l => l.trim()).filter(Boolean).join('\n');
+}
+
+function minifySQL() {
+  const sql = document.getElementById('sqlInput').value.trim();
+  if (!sql) return;
+  const minified = sql.replace(/\s+/g,' ').trim();
+  document.getElementById('sqlOutput').textContent = minified;
+  document.getElementById('sqlStatus').innerHTML = '<span class="status info">压缩完成</span>';
+}
+
+let autoFormatTimer;
+function autoFormat() {
+  clearTimeout(autoFormatTimer);
+  autoFormatTimer = setTimeout(() => {
+  const v = document.getElementById('sqlInput').value.trim();
+  if (v.length > 10) formatSQL();
+}
+
+function copyResult() {
+  const v = document.getElementById('sqlOutput').innerText;
+  if (v && !v.startsWith('//')) navigator.clipboard.writeText(v).then(showToast);
+}
+
+function clearAll() {
+  document.getElementById('sqlInput').value='';
+  document.getElementById('sqlOutput').innerHTML='// 结果将显示在这里';
+  document.getElementById('sqlStatus').innerHTML='';
+}
+
+function loadSample() {
+  document.getElementById('sqlInput').value = `SELECT u.id,u.name,u.email,o.total,o.created_at FROM users u LEFT JOIN orders o ON u.id=o.user_id WHERE u.status='active' AND o.total>100 AND o.created_at>='2024-01-01' GROUP BY u.id,u.name ORDER BY o.total DESC LIMIT 20 OFFSET 0;`;
+  formatSQL();
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); formatSQL(); }
+});
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+</script>
+</body>
+</html>

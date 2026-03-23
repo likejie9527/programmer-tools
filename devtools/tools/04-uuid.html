@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UUID 生成器 — DevKit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/shared.css">
+<style>
+.uuid-list { padding:12px; max-height:500px; overflow-y:auto; }
+.uuid-item {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border-radius:6px;margin-bottom:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  gap:12px;transition:border-color 0.15s;
+}
+.uuid-item:hover { border-color:var(--border2); }
+.uuid-text { font-size:13px;color:#15803d;flex:1;word-break:break-all; }
+.uuid-copy { background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:4px 8px;border-radius:4px;transition:all 0.15s;flex-shrink:0; }
+.uuid-copy:hover { color:var(--accent2);background:#eff6ff; }
+.uuid-num { font-size:11px;color:var(--text3);width:28px;flex-shrink:0; }
+.controls { display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:16px;border-bottom:1px solid var(--border); }
+.control-group { display:flex;align-items:center;gap:8px; }
+.control-label { font-size:11px;color:var(--text3);letter-spacing:0.5px; }
+.num-input { background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;width:70px;outline:none; }
+.num-input:focus { border-color:var(--accent); }
+.version-select { background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;cursor:pointer; }
+.case-toggle { display:flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden; }
+.case-btn { padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all 0.15s; }
+.case-btn.active { background:var(--accent);color:white; }
+.stats-row { padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;gap:20px; }
+</style>
+</head>
+<body>
+<div id="toast">✓ 已复制</div>
+<div class="page-wrap">
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← 返回首页</a>
+    <div class="nav-title">🎲 UUID 生成器</div>
+    <div class="nav-badge">#04</div>
+  </nav>
+
+  <div class="tool-header">
+    <h1>UUID / GUID 生成器</h1>
+    <p>支持 UUID v1 / v4，批量生成最多100个，一键复制，自动去重。</p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">版本</span>
+        <select class="version-select" id="version">
+          <option value="v4">UUID v4 (随机)</option>
+          <option value="v1">UUID v1 (时间)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <span class="control-label">数量</span>
+        <input type="number" class="num-input" id="count" value="10" min="1" max="100">
+      </div>
+      <div class="control-group">
+        <span class="control-label">格式</span>
+        <div class="case-toggle">
+          <button class="case-btn active" id="caseUpper" onclick="setCase('upper',this)">大写</button>
+          <button class="case-btn" id="caseLower" onclick="setCase('lower',this)">小写</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="noDashes" style="accent-color:var(--accent)"> 去除连字符
+        </label>
+      </div>
+      <div class="control-group">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="withBraces" style="accent-color:var(--accent)"> 添加花括号
+        </label>
+      </div>
+    </div>
+    <div style="padding:12px 16px;display:flex;gap:8px;border-bottom:1px solid var(--border)">
+      <button class="btn btn-primary" onclick="generate()">⚡ 生成</button>
+      <button class="btn btn-secondary" onclick="copyAll()">复制全部</button>
+      <button class="btn btn-secondary" onclick="regenerate()">刷新</button>
+      <button class="btn btn-danger" onclick="clearList()">清空</button>
+    </div>
+    <div class="uuid-list" id="uuidList"></div>
+    <div class="stats-row" id="statsRow" style="display:none"></div>
+  </div>
+
+  <div class="ad-footer">
+    <div><strong>🚀 Pro 功能</strong> — 自定义UUID格式、Snowflake ID、ULID生成</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+</div>
+
+<script>
+let uuids = [];
+let caseMode = 'upper';
+
+function setCase(mode, el) {
+  caseMode = mode;
+  document.querySelectorAll('.case-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (uuids.length) renderList();
+}
+
+function uuidV4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+}
+
+function uuidV1() {
+  const now = Date.now();
+  const timeHigh = Math.floor(now / 0x100000000) & 0x0fff | 0x1000;
+  const timeLow = now & 0xffffffff;
+  const clockSeq = Math.floor(Math.random() * 0x3fff) | 0x8000;
+  const node = Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => b.toString(16).padStart(2,'0')).join('');
+  return [
+    timeLow.toString(16).padStart(8,'0'),
+    (Math.floor(now / 0x100000000) & 0xffff).toString(16).padStart(4,'0'),
+    timeHigh.toString(16).padStart(4,'0'),
+    clockSeq.toString(16).padStart(4,'0'),
+    node
+  ].join('-');
+}
+
+function formatUUID(uuid) {
+  let result = uuid;
+  if (document.getElementById('noDashes').checked) result = result.replace(/-/g, '');
+  if (document.getElementById('withBraces').checked) result = '{' + result + '}';
+  return caseMode === 'upper' ? result.toUpperCase() : result.toLowerCase();
+}
+
+function generate() {
+  const count = Math.min(100, Math.max(1, parseInt(document.getElementById('count').value) || 10));
+  const version = document.getElementById('version').value;
+  const fn = version === 'v4' ? uuidV4 : uuidV1;
+  const set = new Set();
+  while (set.size < count) set.add(fn());
+  uuids = Array.from(set);
+  renderList();
+}
+
+function regenerate() { generate(); }
+
+function renderList() {
+  const list = document.getElementById('uuidList');
+  list.innerHTML = uuids.map((u, i) => `
+    <div class="uuid-item">
+      <span class="uuid-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="uuid-text">${formatUUID(u)}</span>
+      <button class="uuid-copy" onclick="copyOne(this)">复制</button>
+    </div>
+  `).join('');
+  const stats = document.getElementById('statsRow');
+  stats.style.display = 'flex';
+  stats.innerHTML = `<span>共生成 ${uuids.length} 个 UUID</span><span>版本: ${document.getElementById('version').value.toUpperCase()}</span>`;
+}
+
+function copyOne(btn) {
+  const uuid = btn.closest(".uuid-item").querySelector(".uuid-text").textContent;
+  navigator.clipboard.writeText(uuid).then(showToast);
+}
+
+function copyAll() {
+  if (!uuids.length) { generate(); return; }
+  const text = uuids.map(u => formatUUID(u)).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const t = document.getElementById('toast');
+    t.textContent = `✓ 已复制 ${uuids.length} 个`;
+    showToast();
+    setTimeout(() => { t.textContent = '✓ 已复制'; }, 2100);
+  });
+}
+
+function clearList() {
+  uuids = [];
+  document.getElementById('uuidList').innerHTML = '';
+  document.getElementById('statsRow').style.display = 'none';
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generate(); }
+});
+
+// Auto generate on load
+generate();
+</script>
+</body>
+</html>

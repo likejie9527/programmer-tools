@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码 Diff — DevKit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/shared.css">
+<style>
+.diff-area { display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+.diff-pane { display:flex;flex-direction:column; }
+.diff-pane:first-child { border-right:1px solid var(--border); }
+.diff-header { padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);letter-spacing:1px;display:flex;align-items:center;justify-content:space-between; }
+.diff-input { width:100%;min-height:240px;background:transparent;border:none;padding:14px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;resize:vertical;outline:none; }
+.diff-output-area { display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:240px; }
+.diff-out-pane { overflow:auto; }
+.diff-out-pane:first-child { border-right:1px solid var(--border); }
+.diff-lines { padding:14px 0;font-size:12px;line-height:1.7; }
+.diff-line { display:flex;padding:0 14px;min-height:1.7em; }
+.diff-line-num { width:32px;text-align:right;color:var(--text3);font-size:11px;margin-right:12px;user-select:none;flex-shrink:0; }
+.diff-line-content { flex:1;word-break:break-word;white-space:pre-wrap; }
+.diff-add { background:#f0fdf4; }
+.diff-add .diff-line-content { color:var(--green); }
+.diff-del { background:#fff1f2; }
+.diff-del .diff-line-content { color:var(--red); text-decoration:line-through; }
+.diff-same { background:transparent; }
+.diff-same .diff-line-content { color:var(--text2); }
+.diff-stats { display:flex;gap:20px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:11px; }
+.stat-add { color:var(--green); }
+.stat-del { color:var(--red); }
+.stat-same { color:var(--text3); }
+@media (max-width:700px) { .diff-area, .diff-output-area { grid-template-columns:1fr; } .diff-pane:first-child,.diff-out-pane:first-child { border-right:none;border-bottom:1px solid var(--border); } }
+</style>
+</head>
+<body>
+<div id="toast">✓ 已复制</div>
+<div class="page-wrap">
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← 返回首页</a>
+    <div class="nav-title">⇄ Diff 对比</div>
+    <div class="nav-badge">#08</div>
+  </nav>
+
+  <div class="tool-header">
+    <h1>代码 Diff 对比</h1>
+    <p>左右双栏输入，实时检测差异，增删改高亮标注，显示行号。</p>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="runDiff()">⚡ 对比</button>
+    <button class="btn btn-secondary" onclick="swapPanes()">⇄ 交换</button>
+    <button class="btn btn-danger" onclick="clearAll()">清空</button>
+    <label style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+      <input type="checkbox" id="ignoreWhitespace" style="accent-color:var(--accent)" onchange="runDiff()"> 忽略空白
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer">
+      <input type="checkbox" id="ignoreCase" style="accent-color:var(--accent)" onchange="runDiff()"> 忽略大小写
+    </label>
+  </div>
+
+  <!-- Input panes -->
+  <div class="diff-area" style="margin-bottom:16px">
+    <div class="diff-pane">
+      <div class="diff-header">
+        <span>// 原始文本 (A)</span>
+        <button class="btn btn-secondary" style="padding:2px 8px;font-size:10px" onclick="loadSample('a')">示例</button>
+      </div>
+      <textarea class="diff-input" id="paneA" placeholder="粘贴原始代码或文本..." oninput="runDiff()"></textarea>
+    </div>
+    <div class="diff-pane">
+      <div class="diff-header">
+        <span>// 修改文本 (B)</span>
+        <button class="btn btn-secondary" style="padding:2px 8px;font-size:10px" onclick="loadSample('b')">示例</button>
+      </div>
+      <textarea class="diff-input" id="paneB" placeholder="粘贴修改后的代码或文本..." oninput="runDiff()"></textarea>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div id="outputWrap" style="display:none">
+    <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">// 差异结果</div>
+    <div class="diff-output-area">
+      <div class="diff-out-pane">
+        <div class="diff-header"><span>原始 (A)</span></div>
+        <div class="diff-lines" id="outA"></div>
+      </div>
+      <div class="diff-out-pane">
+        <div class="diff-header"><span>修改 (B)</span></div>
+        <div class="diff-lines" id="outB"></div>
+      </div>
+    </div>
+    <div class="diff-stats" id="diffStats"></div>
+  </div>
+
+  <div id="noChanges" style="display:none;padding:24px;text-align:center;font-size:13px;color:var(--green)">
+    ✓ 两段文本完全相同，无差异
+  </div>
+
+  <div class="ad-footer">
+    <div><strong>🚀 Pro 功能</strong> — 文件上传对比、内联差异模式、导出Patch文件</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+</div>
+
+<script>
+function lcs(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1}, () => new Array(n+1).fill(0));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++) {
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  }
+  return dp;
+}
+
+function diff(a, b) {
+  const dp = lcs(a, b);
+  const result = [];
+  let i=a.length, j=b.length;
+  while (i>0 || j>0) {
+    if (i>0 && j>0 && a[i-1]===b[j-1]) { result.push({type:'same',val:a[i-1]}); i--;j--; }
+    else if (j>0 && (i===0 || dp[i][j-1]>=dp[i-1][j])) { result.push({type:'add',val:b[j-1]}); j--; }
+    else { result.push({type:'del',val:a[i-1]}); i--; }
+  }
+  return result.reverse();
+}
+
+function processLine(s) {
+  const ignoreWs = document.getElementById('ignoreWhitespace').checked;
+  const ignoreCase = document.getElementById('ignoreCase').checked;
+  let r = s;
+  if (ignoreWs) r = r.trim().replace(/\s+/g,' ');
+  if (ignoreCase) r = r.toLowerCase();
+  return r;
+}
+
+function runDiff() {
+  const a = document.getElementById('paneA').value;
+  const b = document.getElementById('paneB').value;
+  if (!a && !b) {
+    document.getElementById('outputWrap').style.display = 'none';
+    document.getElementById('noChanges').style.display = 'none';
+    return;
+  }
+  const linesA = a.split('\n');
+  const linesB = b.split('\n');
+  const procA = linesA.map(processLine);
+  const procB = linesB.map(processLine);
+  const result = diff(procA, procB);
+  let addCount=0, delCount=0, sameCount=0;
+  let outA='', outB='', numA=0, numB=0;
+  // Align output by building parallel arrays
+  const rowsA = [], rowsB = [];
+  result.forEach(r => {
+    if (r.type==='same') {
+      rowsA.push({type:'same',val:linesA[numA++]});
+      rowsB.push({type:'same',val:linesB[numB++]});
+      sameCount++;
+    } else if (r.type==='del') {
+      rowsA.push({type:'del',val:linesA[numA++]});
+      rowsB.push({type:'empty'});
+      delCount++;
+    } else {
+      rowsA.push({type:'empty'});
+      rowsB.push({type:'add',val:linesB[numB++]});
+      addCount++;
+    }
+  });
+  // Check no changes
+  if (addCount===0 && delCount===0) {
+    document.getElementById('outputWrap').style.display = 'none';
+    document.getElementById('noChanges').style.display = 'block';
+    return;
+  }
+  document.getElementById('noChanges').style.display = 'none';
+  document.getElementById('outputWrap').style.display = 'block';
+  let lineNumA=0, lineNumB=0;
+  document.getElementById('outA').innerHTML = rowsA.map(r => {
+    if (r.type==='empty') return `<div class="diff-line"><span class="diff-line-num"></span><span class="diff-line-content"></span></div>`;
+    lineNumA++;
+    return `<div class="diff-line diff-${r.type}"><span class="diff-line-num">${lineNumA}</span><span class="diff-line-content">${escHtml(r.val)}</span></div>`;
+  }).join('');
+  document.getElementById('outB').innerHTML = rowsB.map(r => {
+    if (r.type==='empty') return `<div class="diff-line"><span class="diff-line-num"></span><span class="diff-line-content"></span></div>`;
+    lineNumB++;
+    return `<div class="diff-line diff-${r.type}"><span class="diff-line-num">${lineNumB}</span><span class="diff-line-content">${escHtml(r.val)}</span></div>`;
+  }).join('');
+  document.getElementById('diffStats').innerHTML = `
+    <span class="stat-add">+${addCount} 新增行</span>
+    <span class="stat-del">-${delCount} 删除行</span>
+    <span class="stat-same">${sameCount} 相同行</span>
+  `;
+}
+
+function swapPanes() {
+  const a = document.getElementById('paneA').value;
+  const b = document.getElementById('paneB').value;
+  document.getElementById('paneA').value = b;
+  document.getElementById('paneB').value = a;
+  runDiff();
+}
+
+function clearAll() {
+  document.getElementById('paneA').value = '';
+  document.getElementById('paneB').value = '';
+  document.getElementById('outputWrap').style.display = 'none';
+  document.getElementById('noChanges').style.display = 'none';
+}
+
+function loadSample(which) {
+  const A = `function hello(name) {\n  console.log("Hello, " + name);\n  return name;\n}\n\nconst greet = hello("World");`;
+  const B = `function hello(name, greeting = "Hello") {\n  console.log(greeting + ", " + name + "!");\n  const result = { name, greeting };\n  return result;\n}\n\nconst greet = hello("World", "Hi");`;
+  if (which==='a') document.getElementById('paneA').value = A;
+  else document.getElementById('paneB').value = B;
+  runDiff();
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>

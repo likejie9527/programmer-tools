@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>进制转换 — DevKit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/shared.css">
+<style>
+.radix-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px; }
+.radix-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color 0.2s; }
+.radix-card.active-source { border-color:var(--accent); }
+.radix-header { padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+.radix-label { display:flex;align-items:center;gap:8px; }
+.radix-name { font-size:13px;color:var(--text);font-weight:500; }
+.radix-num { font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid;color:#2563eb;border-color:#bfdbfe; }
+.radix-input { width:100%;background:transparent;border:none;padding:16px;color:#0e7490;font-family:'JetBrains Mono',monospace;font-size:16px;outline:none;letter-spacing:1px; }
+.radix-input.readonly { color:var(--green);cursor:default; }
+.radix-input::placeholder { color:var(--text3);font-size:13px;letter-spacing:0; }
+.bits-display { padding:8px 16px 14px;display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid var(--border); }
+.bit-group { display:flex;gap:2px; }
+.bit { width:18px;height:28px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.1s;border:1px solid var(--border); }
+.bit.one { background:#bfdbfe;color:#2563eb;border-color:#93c5fd; }
+.bit.zero { background:var(--surface2);color:var(--text3); }
+.bit:hover { transform:scale(1.1); }
+.info-row { display:flex;justify-content:space-between;padding:6px 16px;border-top:1px solid var(--border);font-size:11px; }
+.info-row span:first-child { color:var(--text3); }
+.info-row span:last-child { color:var(--text2); }
+.converter-row { background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px; }
+.conv-title { font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px; }
+.conv-inputs { display:flex;gap:12px;align-items:center;flex-wrap:wrap; }
+.conv-input { flex:1;min-width:100px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;outline:none;text-align:center; }
+.conv-input:focus { border-color:var(--accent); }
+.conv-arrow { color:var(--text3);font-size:18px;flex-shrink:0; }
+@media (max-width:600px) { .radix-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div id="toast">✓ 已复制</div>
+<div class="page-wrap">
+  <nav class="top-nav">
+    <a href="../index.html" class="back-btn">← 返回首页</a>
+    <div class="nav-title">01 进制转换</div>
+    <div class="nav-badge">#09</div>
+  </nav>
+
+  <div class="tool-header">
+    <h1>进制转换工具</h1>
+    <p>二进制、八进制、十进制、十六进制实时互转，可视化位显示。</p>
+  </div>
+
+  <div class="toolbar" style="margin-bottom:20px">
+    <button class="btn btn-danger" onclick="clearAll()">清空</button>
+    <span style="font-size:11px;color:var(--text3);margin-left:auto">点击任意进制输入框实时转换 →</span>
+  </div>
+
+  <div class="radix-grid">
+    <div class="radix-card" id="card-dec">
+      <div class="radix-header">
+        <div class="radix-label">
+          <span class="radix-name">十进制</span>
+          <span class="radix-num">DEC</span>
+        </div>
+        <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="copyVal('dec')">复制</button>
+      </div>
+      <input class="radix-input" id="inp-dec" placeholder="输入十进制数..." oninput="convert('dec')" type="text">
+      <div class="info-row"><span>有符号</span><span id="info-dec-signed">—</span></div>
+    </div>
+
+    <div class="radix-card" id="card-hex">
+      <div class="radix-header">
+        <div class="radix-label">
+          <span class="radix-name">十六进制</span>
+          <span class="radix-num">HEX</span>
+        </div>
+        <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="copyVal('hex')">复制</button>
+      </div>
+      <input class="radix-input" id="inp-hex" placeholder="输入十六进制..." oninput="convert('hex')" type="text">
+      <div class="info-row"><span>0x 前缀</span><span id="info-hex-prefix">—</span></div>
+    </div>
+
+    <div class="radix-card" id="card-bin">
+      <div class="radix-header">
+        <div class="radix-label">
+          <span class="radix-name">二进制</span>
+          <span class="radix-num">BIN</span>
+        </div>
+        <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="copyVal('bin')">复制</button>
+      </div>
+      <input class="radix-input" id="inp-bin" placeholder="输入二进制 0/1..." oninput="convert('bin')" type="text">
+      <div class="bits-display" id="bits-vis"></div>
+    </div>
+
+    <div class="radix-card" id="card-oct">
+      <div class="radix-header">
+        <div class="radix-label">
+          <span class="radix-name">八进制</span>
+          <span class="radix-num">OCT</span>
+        </div>
+        <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="copyVal('oct')">复制</button>
+      </div>
+      <input class="radix-input" id="inp-oct" placeholder="输入八进制 0-7..." oninput="convert('oct')" type="text">
+      <div class="info-row"><span>字节数</span><span id="info-bytes">—</span></div>
+    </div>
+  </div>
+
+  <!-- Character converter -->
+  <div class="converter-row">
+    <div class="conv-title">// 字符 ↔ 编码转换</div>
+    <div class="conv-inputs">
+      <input class="conv-input" id="charInput" placeholder="字符" maxlength="1" oninput="charConvert('char')">
+      <span class="conv-arrow">⇄</span>
+      <input class="conv-input" id="charDec" placeholder="十进制" oninput="charConvert('dec')">
+      <span class="conv-arrow">⇄</span>
+      <input class="conv-input" id="charHex" placeholder="十六进制" oninput="charConvert('hex')">
+      <span class="conv-arrow">⇄</span>
+      <input class="conv-input" id="charUni" placeholder="Unicode" oninput="charConvert('uni')">
+    </div>
+  </div>
+
+  <div class="ad-footer">
+    <div><strong>🚀 Pro 功能</strong> — 浮点数转换、负数补码、字节序转换</div>
+    <button class="ad-btn">了解 Pro →</button>
+  </div>
+</div>
+
+<script>
+let updating = false;
+
+function convert(from) {
+  if (updating) return;
+  updating = true;
+  const val = document.getElementById('inp-'+from).value.trim().replace(/\s/g,'');
+  let num;
+  try {
+    if (!val) { clearOutputs(from); updating=false; return; }
+    if (from==='dec') num = BigInt(val);
+    else if (from==='hex') num = BigInt('0x' + val.replace(/^0x/i,''));
+    else if (from==='bin') num = BigInt('0b' + val);
+    else if (from==='oct') num = BigInt('0o' + val);
+    setAllValues(num, from);
+  } catch(e) {
+    document.getElementById('inp-'+from).style.color = 'var(--red)';
+  }
+  updating = false;
+}
+
+function setAllValues(num, skip) {
+  const types = ['dec','hex','bin','oct'];
+  types.forEach(t => {
+    const el = document.getElementById('inp-'+t);
+    el.style.color = '';
+    if (t===skip) return;
+    if (t==='dec') el.value = num.toString(10);
+    else if (t==='hex') el.value = num.toString(16).toUpperCase();
+    else if (t==='bin') el.value = num.toString(2);
+    else if (t==='oct') el.value = num.toString(8);
+  });
+  // Update info
+  const n = Number(num);
+  document.getElementById('info-dec-signed').textContent = n > 2147483647 ? 'overflow' : n;
+  document.getElementById('info-hex-prefix').textContent = '0x' + num.toString(16).toUpperCase();
+  const bytes = Math.ceil(num.toString(2).length / 8);
+  document.getElementById('info-bytes').textContent = bytes + ' 字节 / ' + (bytes*8) + ' 位';
+  // Visualize bits
+  const binStr = num.toString(2);
+  const padded = binStr.padStart(Math.max(8, Math.ceil(binStr.length/8)*8), '0');
+  const vis = document.getElementById('bits-vis');
+  const groups = [];
+  for (let g = 0; g < padded.length; g += 8) {
+    const byte = padded.slice(g, g+8);
+    const bits = Array.from(byte).map(b => `<span class="bit ${b==='1'?'one':'zero'}">${b}</span>`).join('');
+    groups.push(`<div class="bit-group">${bits}</div>`);
+  }
+  vis.innerHTML = groups.join('');
+}
+
+function clearOutputs(skip) {
+  ['dec','hex','bin','oct'].forEach(t => {
+    if (t!==skip) document.getElementById('inp-'+t).value='';
+  });
+  document.getElementById('bits-vis').innerHTML = '';
+  document.getElementById('info-dec-signed').textContent='—';
+  document.getElementById('info-hex-prefix').textContent='—';
+  document.getElementById('info-bytes').textContent='—';
+}
+
+function clearAll() {
+  ['dec','hex','bin','oct'].forEach(t => { document.getElementById('inp-'+t).value=''; });
+  clearOutputs(null);
+  ['charInput','charDec','charHex','charUni'].forEach(id => document.getElementById(id).value='');
+}
+
+function copyVal(type) {
+  const v = document.getElementById('inp-'+type).value;
+  if (v) navigator.clipboard.writeText(v).then(showToast);
+}
+
+function charConvert(from) {
+  if (updating) return;
+  updating = true;
+  try {
+    let code;
+    if (from==='char') {
+      const c = document.getElementById('charInput').value;
+      if (!c) { updating=false; return; }
+      code = c.codePointAt(0);
+    } else if (from==='dec') {
+      code = parseInt(document.getElementById('charDec').value);
+    } else if (from==='hex') {
+      code = parseInt(document.getElementById('charHex').value, 16);
+    } else if (from==='uni') {
+      const v = document.getElementById('charUni').value.replace(/^U\+/i,'');
+      code = parseInt(v, 16);
+    }
+    if (isNaN(code)) { updating=false; return; }
+    if (from!=='char') document.getElementById('charInput').value = String.fromCodePoint(code);
+    if (from!=='dec') document.getElementById('charDec').value = code;
+    if (from!=='hex') document.getElementById('charHex').value = code.toString(16).toUpperCase();
+    if (from!=='uni') document.getElementById('charUni').value = 'U+' + code.toString(16).toUpperCase().padStart(4,'0');
+  } catch(e) {}
+  updating = false;
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
