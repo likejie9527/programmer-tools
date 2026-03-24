@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown 预览 — DevKit</title>
+<!-- 广告 & 隐私合规 -->
+<meta name="robots" content="index, follow">
+<meta name="description" content="免费在线工具，纯前端运行，安全无上传。">
+<link rel="privacy-policy" href="../privacy.html">
+
+<style>body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:32px;line-height:1.8;color:#333}pre{background:#f5f5f5;padding:16px;border-radius:8px;overflow:auto}code{background:#f0f0f0;padding:2px 6px;border-radius:4px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px}blockquote{border-left:3px solid #7c6aff;margin:0;padding-left:16px;color:#666}</style></head><body>${body}
+<style>
+#cookieNotice {
+    position: fixed; left:0; right:0; bottom:0;
+    background:#111; color:#fff; padding:14px 20px;
+    text-align:center; z-index:9999; font-size:14px;
+    display: flex; justify-content:center; align-items:center;
+    gap:12px; flex-wrap:wrap; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}
+#cookieNotice button {
+    background:#2563eb; color:#fff; border:none;
+    padding:6px 14px; border-radius:6px; cursor:pointer;
+    font-family: inherit; font-size: 13px;
+}
+#cookieNotice a { color:#60a5fa; text-decoration: none; }
+#cookieNotice a:hover { text-decoration: underline; }
+</style>
+<div id="cookieNotice">
+    我们使用 Cookie 提升体验，并展示个性化广告。 
+    继续浏览即表示你同意我们的 <a href="../privacy.html" target="_blank">隐私政策</a>
+    <button onclick="acceptCookie()">我知道了</button>
+</div>
+<script>
+    function acceptCookie() {
+        localStorage.setItem('cookieAccepted', 'true');
+        document.getElementById('cookieNotice').style.display='none';
+    }
+    if(localStorage.getItem('cookieAccepted') === 'true') {
+        document.getElementById('cookieNotice').style.display='none';
+    }
+</script>
+</body></html>`;
+  const blob = new Blob([html],{type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'export.html';
+  a.click();
+}
+
+function clearEditor() {
+  document.getElementById('mdEditor').value='';
+  render();
+}
+
+function toggleFullscreen() {
+  const p = document.getElementById('preview').parentElement;
+  p.style.position = p.style.position==='fixed' ? '' : 'fixed';
+  p.style.inset = p.style.inset==='0px' ? '' : '0';
+  p.style.zIndex = p.style.zIndex==='9999' ? '' : '9999';
+  p.style.background = p.style.background ? '' : 'var(--bg)';
+  p.style.padding = p.style.padding ? '' : '32px';
+  p.style.overflow = p.style.overflow ? '' : 'auto';
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+render();
+</script>
+
+<style>
+#cookieNotice {
+    position: fixed; left:0; right:0; bottom:0;
+    background:#111; color:#fff; padding:14px 20px;
+    text-align:center; z-index:9999; font-size:14px;
+    display: flex; justify-content:center; align-items:center;
+    gap:12px; flex-wrap:wrap; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}
+#cookieNotice button {
+    background:#2563eb; color:#fff; border:none;
+    padding:6px 14px; border-radius:6px; cursor:pointer;
+    font-family: inherit; font-size: 13px;
+}
+#cookieNotice a { color:#60a5fa; text-decoration: none; }
+#cookieNotice a:hover { text-decoration: underline; }
+</style>
+<div id="cookieNotice">
+    我们使用 Cookie 提升体验，并展示个性化广告。 
+    继续浏览即表示你同意我们的 <a href="../privacy.html" target="_blank">隐私政策</a>
+    <button onclick="acceptCookie()">我知道了</button>
+</div>
+<script>
+    function acceptCookie() {
+        localStorage.setItem('cookieAccepted', 'true');
+        document.getElementById('cookieNotice').style.display='none';
+    }
+    if(localStorage.getItem('cookieAccepted') === 'true') {
+        document.getElementById('cookieNotice').style.display='none';
+    }
+</script>
+</body>
+</html>

@@ -1,9 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>URL 编码/解码 — DevKit</title>
+<!-- 广告 & 隐私合规 -->
+<meta name="robots" content="index, follow">
+<meta name="description" content="免费在线工具，纯前端运行，安全无上传。">
+<link rel="privacy-policy" href="../privacy.html">
+
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8764762267426063" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
@@ -218,6 +223,37 @@ function showToast() {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
 }
+</script>
+
+<style>
+#cookieNotice {
+    position: fixed; left:0; right:0; bottom:0;
+    background:#111; color:#fff; padding:14px 20px;
+    text-align:center; z-index:9999; font-size:14px;
+    display: flex; justify-content:center; align-items:center;
+    gap:12px; flex-wrap:wrap; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}
+#cookieNotice button {
+    background:#2563eb; color:#fff; border:none;
+    padding:6px 14px; border-radius:6px; cursor:pointer;
+    font-family: inherit; font-size: 13px;
+}
+#cookieNotice a { color:#60a5fa; text-decoration: none; }
+#cookieNotice a:hover { text-decoration: underline; }
+</style>
+<div id="cookieNotice">
+    我们使用 Cookie 提升体验，并展示个性化广告。 
+    继续浏览即表示你同意我们的 <a href="../privacy.html" target="_blank">隐私政策</a>
+    <button onclick="acceptCookie()">我知道了</button>
+</div>
+<script>
+    function acceptCookie() {
+        localStorage.setItem('cookieAccepted', 'true');
+        document.getElementById('cookieNotice').style.display='none';
+    }
+    if(localStorage.getItem('cookieAccepted') === 'true') {
+        document.getElementById('cookieNotice').style.display='none';
+    }
 </script>
 </body>
 </html>
