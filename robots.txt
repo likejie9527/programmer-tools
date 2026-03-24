@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://programmer-tools-delta.vercel.app/sitemap.xml
